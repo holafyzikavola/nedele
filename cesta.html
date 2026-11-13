@@ -339,22 +339,19 @@
     const el = document.getElementById("map");
     if (!el || !window.L) return;           // bez internetu zůstane jednoduchá mapka
     const pts = JSON.parse(el.dataset.points);
-    // Leaflet vykreslíme do skrytého boxu a vyměníme za kreslenou mapku,
-    // až když se opravdu načtou mapové podklady.
-    const holder = document.createElement("div");
-    holder.className = "map";
-    holder.style.cssText = "position:absolute;left:-9999px;width:" + el.offsetWidth + "px";
-    document.body.appendChild(holder);
-    const map = L.map(holder, { scrollWheelZoom: false });
-    const tiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: "abcd", maxZoom: 19
+    const fallbackHTML = el.innerHTML;          // kreslená mapka jako záloha
+    el.innerHTML = "";
+    const map = L.map(el, { scrollWheelZoom: false });
+    map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+    let errors = 0, fellBack = false;
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 19
+    }).on("tileerror", () => {
+      if (++errors > 4 && !fellBack) {          // podklad nejde načíst → vrátit kreslenou mapku
+        fellBack = true; map.remove();
+        el.className = "map"; el.removeAttribute("style"); el.innerHTML = fallbackHTML;
+      }
     }).addTo(map);
-    tiles.once("load", () => {
-      holder.style.cssText = "";
-      el.replaceWith(holder);
-      map.invalidateSize();
-      map.fitBounds(pts.map(p => [p.lat, p.lng]), { padding: [50, 50] });
-    });
     map.fitBounds(pts.map(p => [p.lat, p.lng]), { padding: [50, 50] });
 
     pts.forEach(p => {
@@ -368,6 +365,7 @@
     // trasa autem: 1 → 2 a 2 → 3
     for (let i = 0; i < pts.length - 1; i++) {
       const line = await legRoute(pts[i], pts[i + 1]);
+      if (fellBack) return;
       L.polyline(line, { color: "#c98f86", weight: 5, opacity: .9, lineCap: "round", className: "route-line" }).addTo(map);
     }
   }
