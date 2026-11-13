@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Naše cesta 💌</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Nunito:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root {
+    --bg: #f7f1ea; --card: #fffaf5; --text: #4a3f3a; --muted: #8c7d74;
+    --accent: #c98f86; --accent-soft: #ecd5cf; --sage: #a7b8a1; --line: #e8ddd3;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Nunito", system-ui, sans-serif; background: var(--bg); color: var(--text);
+    min-height: 100vh; line-height: 1.6;
+    background-image:
+      radial-gradient(circle at 15% 10%, #f3e1da 0, transparent 40%),
+      radial-gradient(circle at 85% 90%, #e3eadf 0, transparent 40%);
+    background-attachment: fixed;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 40px 20px 80px; }
+  .back { display: inline-block; color: var(--muted); text-decoration: none; font-size: 15px; margin-bottom: 28px; }
+  .back:hover { color: var(--accent); }
+  header { text-align: center; margin-bottom: 36px; }
+  .eyebrow { font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  h1 { font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600; font-size: clamp(38px, 8vw, 54px); line-height: 1.05; }
+  h1 span { color: var(--accent); font-style: italic; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 28px 24px; margin-bottom: 22px;
+    box-shadow: 0 10px 30px -18px rgba(120, 90, 70, .35);
+    animation: rise .6s both;
+  }
+  .card:nth-child(2) { animation-delay: .1s; } .card:nth-child(3) { animation-delay: .2s; }
+  .card:nth-child(4) { animation-delay: .3s; } .card:nth-child(5) { animation-delay: .4s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .card h2 { font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600; font-size: 28px; line-height: 1.15; margin-bottom: 10px; }
+  .card p { margin-bottom: 10px; }
+  .when, .time { color: var(--muted); font-size: 14px; }
+  .time { color: var(--accent); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; font-size: 12px; margin-bottom: 4px !important; }
+
+  .route { list-style: none; margin: 18px 0; display: grid; gap: 12px; }
+  .route li { display: flex; gap: 14px; align-items: center; background: var(--bg); padding: 12px 14px; border-radius: 14px; }
+  .route .ico { font-size: 22px; }
+  .route small { display: block; color: var(--muted); }
+  .map { border-radius: 16px; overflow: hidden; border: 1px solid var(--line); margin: 16px 0; aspect-ratio: 600 / 430; background: var(--bg); }
+  .map svg { width: 100%; height: 100%; display: block; font-family: 'Nunito', sans-serif; }
+  .dash { animation: flow 1.2s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -24; } }
+  .pin { opacity: 0; animation: pop .5s forwards; }
+  @keyframes pop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+  .map.leaflet-container { aspect-ratio: auto; height: 380px; font-family: "Nunito", sans-serif; }
+  .leaflet-tile-pane { filter: sepia(.25) saturate(.8) brightness(1.03); }
+  .num-pin {
+    width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff;
+    display: grid; place-items: center; font-weight: 700; font-size: 16px;
+    border: 3px solid #fff; box-shadow: 0 4px 12px rgba(120,90,70,.35);
+  }
+  .pin-label { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 4px 9px; box-shadow: 0 4px 12px -6px rgba(120,90,70,.4); color: var(--text); font-size: 13px; line-height: 1.3; }
+  .pin-label small { color: var(--muted); display: block; }
+  .leaflet-tooltip.pin-label::before { display: none; }
+  .route-line { stroke-dasharray: 2 10; animation: flow 1.2s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -24; } }
+  .tasks { list-style: none; display: grid; gap: 10px; margin-top: 16px; }
+  .task label {
+    width: 100%; display: flex; gap: 14px; align-items: center; text-align: left;
+    background: var(--bg); border: 1.5px solid transparent; border-radius: 14px; padding: 12px 14px;
+    font: inherit; color: inherit; cursor: pointer; transition: border-color .2s, opacity .2s, transform .15s;
+  }
+  .task label:hover { border-color: var(--accent-soft); }
+  .task label:active { transform: scale(.98); }
+  .task small { display: block; color: var(--muted); }
+  .task .txt { flex: 1; }
+  .thumb { flex: none; width: 52px; height: 52px; border-radius: 10px; background-size: cover; background-position: center; display: none; box-shadow: 0 3px 10px -4px rgba(120,90,70,.5); }
+  .task.done .thumb { display: block; }
+  .hint { font-size: 13px; color: var(--muted); text-align: center; margin-top: 12px; }
+  .collage-out { margin-top: 20px; }
+  .collage-out img { width: 100%; border-radius: 14px; box-shadow: 0 10px 30px -14px rgba(120,90,70,.5); }
+  .collage-out .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
+  .busy { opacity: .6; pointer-events: none; }
+  .check {
+    flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+    border: 2px solid var(--accent); color: var(--accent); font-weight: 700; transition: all .3s;
+  }
+  .task.done .check { background: var(--accent); color: #fff; }
+  .task.done b { text-decoration: line-through; text-decoration-color: var(--accent); }
+  .task.locked label { opacity: .45; cursor: not-allowed; }
+  .task.locked .check { border-style: dashed; }
+  .task.pop .check { animation: pop2 .5s; }
+  @keyframes pop2 { 50% { transform: scale(1.3); } }
+  .mise-done { display: none; text-align: center; margin-top: 22px; padding-top: 20px; border-top: 1px dashed var(--line); }
+  .mise-done.show { display: block; animation: rise .7s both; }
+  .big-heart { font-size: 44px; animation: beat 1.4s ease-in-out infinite; }
+  @keyframes beat { 0%,100% { transform: scale(1); } 15% { transform: scale(1.18); } 30% { transform: scale(1); } 45% { transform: scale(1.12); } }
+  .facts { list-style: none; margin: 14px 0 6px; display: grid; gap: 8px; }
+  .facts li { padding-left: 14px; border-left: 3px solid var(--accent-soft); color: var(--muted); }
+  .facts b { color: var(--text); margin-right: 4px; }
+  .note { font-style: italic; color: var(--muted); }
+
+  .btn {
+    display: inline-block; text-decoration: none; padding: 12px 22px; border-radius: 999px;
+    background: var(--accent); color: #fff; font-weight: 600;
+  }
+  .btn.ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+
+  .lock { text-align: center; }
+  .lock-icon { width: 56px; height: 56px; margin: 0 auto 16px; border-radius: 50%; background: var(--accent-soft); display: grid; place-items: center; font-size: 24px; }
+  .countdown { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 18px 0; }
+  .unit { min-width: 72px; padding: 12px 8px; background: var(--bg); border-radius: 14px; }
+  .num { display: block; font-family: "Cormorant Garamond", Georgia, serif; font-size: 34px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .lbl { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; margin-top: 36px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">← zpět</a>
+  <header>
+    <p class="eyebrow">Pro Evu 💌</p>
+    <h1>Kudy pojedeme <span>a co uvidíme</span></h1>
+  </header>
+  <div id="content"></div>
+  <footer>Těším se ✨</footer>
+</main>
+
+<script>
+  const REVEAL_AT = new Date("2026-11-15T12:00:00+01:00");
+  const CONTENT_ENCODED = "PHNlY3Rpb24gY2xhc3M9ImNhcmQiPgogIDxoMj5OYcWhZSBjZXN0YTwvaDI+CiAgPHAgY2xhc3M9IndoZW4iPmF1dG8gwrcgTWljaMOhbGtvdmljZSDihpIgVsOtdGtvdmljZSDihpIgY2VudHJ1bTwvcD4KICA8b2wgY2xhc3M9InJvdXRlIj4KICAgIDxsaT48c3BhbiBjbGFzcz0iaWNvIj7wn5qXPC9zcGFuPjxkaXY+PGI+MSDihpIgMiDCtyBaIE1pY2jDoWxrb3ZpYyBkbyBEb2xuw60gb2JsYXN0aSBWw610a292aWNlPC9iPjxzbWFsbD4xNjowMCwgdnl6dmVkbnUgdMSbIHUgdGViZTwvc21hbGw+PC9kaXY+PC9saT4KICAgIDxsaT48c3BhbiBjbGFzcz0iaWNvIj7wn5q2PC9zcGFuPjxkaXY+PGI+MiDCtyBBcmXDoWxlbSBwxJvFoWt5IGHFviBrIEJvbHQgVG93ZXI8L2I+PHNtYWxsPnN0ZWpuw70gYXJlw6FsLCBhdXRvIG5lY2jDoW1lIHN0w6F0PC9zbWFsbD48L2Rpdj48L2xpPgogICAgPGxpPjxzcGFuIGNsYXNzPSJpY28iPvCfmpc8L3NwYW4+PGRpdj48Yj4yIOKGkiAzIMK3IFogVsOtdGtvdmljIGRvIGNlbnRyYSwgU3R1ZGlvIEc8L2I+PHNtYWxsPkNoZWzEjWlja8OpaG8gNjkxLzgsIE1vcmF2c2vDoSBPc3RyYXZhPC9zbWFsbD48L2Rpdj48L2xpPgogIDwvb2w+CiAgPGRpdiBjbGFzcz0ibWFwIiBpZD0ibWFwIiBkYXRhLXBvaW50cz0nW3sibiI6IDEsICJuYW1lIjogIk1pY2jDoWxrb3ZpY2UiLCAic3ViIjogInZ5enZlZG51IHTEmyDCtyAxNjowMCIsICJsYXQiOiA0OS44NDE4LCAibG5nIjogMTguMzI3NX0sIHsibiI6IDIsICJuYW1lIjogIkRvbG7DrSBWw610a292aWNlIMK3IEJvbHQgVG93ZXIiLCAic3ViIjogInByb2hsw61ka2EgKyBrYXbDoXJuYSDCtyAxNzowMCIsICJsYXQiOiA0OS44MiwgImxuZyI6IDE4LjI3N30sIHsibiI6IDMsICJuYW1lIjogIlN0dWRpbyBHIiwgInN1YiI6ICJQZXJuw61rw6HFmSDCtyAxOTowMCIsICJsYXQiOiA0OS44MzkyLCAibG5nIjogMTguMjg3OH1dJz4KICAgIDxzdmcgdmlld0JveD0iMCAwIDYwMCA0MzAiIHJvbGU9ImltZyIgYXJpYS1sYWJlbD0iU2NoZW1hdGlja8OhIG1hcGEgdHJhc3kgT3N0cmF2b3UiPgogICAgICA8ZGVmcz4KICAgICAgICA8cGF0dGVybiBpZD0iZG90cyIgd2lkdGg9IjE4IiBoZWlnaHQ9IjE4IiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48Y2lyY2xlIGN4PSIyIiBjeT0iMiIgcj0iMS4yIiBmaWxsPSIjZThkZGQzIi8+PC9wYXR0ZXJuPgogICAgICA8L2RlZnM+CiAgICAgIDxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iNDMwIiBmaWxsPSIjZmJmNmYwIi8+CiAgICAgIDxyZWN0IHdpZHRoPSI2MDAiIGhlaWdodD0iNDMwIiBmaWxsPSJ1cmwoI2RvdHMpIi8+CgogICAgICA8IS0tIMWZZWthIE9zdHJhdmljZSAtLT4KICAgICAgPHBhdGggZD0iTTM1MiA0MzAgQyAzNDAgMzYwLCAzODAgMzIwLCAzNjAgMjYwIFMgMzMwIDE2MCwgMzcwIDkwIFMgMzkwIDIwLCAzODAgMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjY2ZkY2NiIiBzdHJva2Utd2lkdGg9IjE0IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICAgICAgPHRleHQgeD0iMzkyIiB5PSI3MCIgZm9udC1zaXplPSIxMyIgZmlsbD0iIzlmYjM5YSIgZm9udC1zdHlsZT0iaXRhbGljIiB0cmFuc2Zvcm09InJvdGF0ZSgtNzIgMzkyIDcwKSI+T3N0cmF2aWNlPC90ZXh0PgoKICAgICAgPCEtLSDEjXR2cnRpIC0tPgogICAgICA8ZyBmb250LXNpemU9IjEzIiBmaWxsPSIjYjhhYWEwIiBsZXR0ZXItc3BhY2luZz0iMS41IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj4KICAgICAgICA8dGV4dCB4PSIxOTAiIHk9IjcwIj5NT1JBVlNLw4EgT1NUUkFWQTwvdGV4dD4KICAgICAgICA8dGV4dCB4PSIxMzAiIHk9IjQwMCI+VsONVEtPVklDRTwvdGV4dD4KICAgICAgICA8dGV4dCB4PSI0OTAiIHk9IjMwMCI+U0xFWlNLw4EgT1NUUkFWQTwvdGV4dD4KICAgICAgPC9nPgoKICAgICAgPCEtLSB0cmFzYSAtLT4KICAgICAgPHBhdGggaWQ9ImxlZzEiIGQ9Ik01MDAgMTUwIEMgNDMwIDE3MCwgNDAwIDIzMCwgMzQwIDI3MCBTIDI0MCAzMzAsIDIwMCAzMjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2M5OGY4NiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMTAiIGNsYXNzPSJkYXNoIi8+CiAgICAgIDxwYXRoIGlkPSJsZWcyIiBkPSJNMjAwIDMyMCBDIDE3MCAyNzAsIDIwMCAyMTAsIDI1MCAxNzUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2M5OGY4NiIgc3Ryb2tlLXdpZHRoPSI0IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1kYXNoYXJyYXk9IjIgMTAiIGNsYXNzPSJkYXNoIi8+CgogICAgICA8IS0tIGJvZHkgLS0+CiAgICAgIDxnIGNsYXNzPSJwaW4iIHN0eWxlPSJhbmltYXRpb24tZGVsYXk6LjFzIj4KICAgICAgICA8Y2lyY2xlIGN4PSI1MDAiIGN5PSIxNTAiIHI9IjIwIiBmaWxsPSIjYzk4Zjg2Ii8+PHRleHQgeD0iNTAwIiB5PSIxNTYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTciIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNmZmYiPjE8L3RleHQ+CiAgICAgICAgPHRleHQgeD0iNTAwIiB5PSIxOTYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTUiIGZvbnQtd2VpZ2h0PSI2MDAiIGZpbGw9IiM0YTNmM2EiPk1pY2jDoWxrb3ZpY2U8L3RleHQ+CiAgICAgICAgPHRleHQgeD0iNTAwIiB5PSIyMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM4YzdkNzQiPnZ5enZlZG51IHTEmyDCtyAxNjowMDwvdGV4dD4KICAgICAgPC9nPgogICAgICA8ZyBjbGFzcz0icGluIiBzdHlsZT0iYW5pbWF0aW9uLWRlbGF5Oi41cyI+CiAgICAgICAgPGNpcmNsZSBjeD0iMjAwIiBjeT0iMzIwIiByPSIyMCIgZmlsbD0iI2M5OGY4NiIvPjx0ZXh0IHg9IjIwMCIgeT0iMzI2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE3IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjZmZmIj4yPC90ZXh0PgogICAgICAgIDx0ZXh0IHg9IjIzNiIgeT0iMzU2IiB0ZXh0LWFuY2hvcj0ic3RhcnQiIGZvbnQtc2l6ZT0iMTUiIGZvbnQtd2VpZ2h0PSI2MDAiIGZpbGw9IiM0YTNmM2EiPkRvbG7DrSBWw610a292aWNlPC90ZXh0PgogICAgICAgIDx0ZXh0IHg9IjIzNiIgeT0iMzc0IiB0ZXh0LWFuY2hvcj0ic3RhcnQiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiM4YzdkNzQiPnByb2hsw61ka2EgKyBCb2x0IFRvd2VyIMK3IDE3OjAwPC90ZXh0PgogICAgICA8L2c+CiAgICAgIDxnIGNsYXNzPSJwaW4iIHN0eWxlPSJhbmltYXRpb24tZGVsYXk6LjlzIj4KICAgICAgICA8Y2lyY2xlIGN4PSIyNTAiIGN5PSIxNzUiIHI9IjIwIiBmaWxsPSIjYzk4Zjg2Ii8+PHRleHQgeD0iMjUwIiB5PSIxODEiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZvbnQtc2l6ZT0iMTciIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiNmZmYiPjM8L3RleHQ+CiAgICAgICAgPHRleHQgeD0iMjgwIiB5PSIxNjAiIHRleHQtYW5jaG9yPSJzdGFydCIgZm9udC1zaXplPSIxNSIgZm9udC13ZWlnaHQ9IjYwMCIgZmlsbD0iIzRhM2YzYSI+U3R1ZGlvIEc8L3RleHQ+CiAgICAgICAgPHRleHQgeD0iMjgwIiB5PSIxNzgiIHRleHQtYW5jaG9yPSJzdGFydCIgZm9udC1zaXplPSIxMiIgZmlsbD0iIzhjN2Q3NCI+UGVybsOta8OhxZkgwrcgMTk6MDA8L3RleHQ+CiAgICAgIDwvZz4KICAgIDwvc3ZnPgogIDwvZGl2PgogIDxwIGNsYXNzPSJ3aGVuIiBzdHlsZT0idGV4dC1hbGlnbjpjZW50ZXIiPm1hcGEgamUgamVuIG9yaWVudGHEjW7DrSDwn5mCPC9wPgo8L3NlY3Rpb24+Cgo8c2VjdGlvbiBjbGFzcz0iY2FyZCBtaXNlIiBpZD0ibWlzZSI+CiAgPHAgY2xhc3M9InRpbWUiPmLEm2hlbSBvZHBvbGVkbmU8L3A+CiAgPGgyPk1pc2UgbmEgbmVkxJtsaSDwn5O4PC9oMj4KICA8cD5OYSBrYcW+ZMOpIHphc3TDoXZjZSBuw6FzIMSNZWvDoSBqZWRlbiDDumtvbDogc3BvbGXEjW7DoSBmb3RrYS4gRGFsxaHDrSDDumtvbCBzZSBvZGVta25lLCBhxb4gZm90a3UgbmFocmFqZW1lIHNlbS4gTmEga29uY2kgeiBuaWNoIHVkxJtsw6FtZSBrb2zDocW+LjwvcD4KICA8b2wgY2xhc3M9InRhc2tzIj4KICAgIDxsaSBjbGFzcz0idGFzayIgZGF0YS1pPSIwIiBkYXRhLXBsYWNlPSJEb2xuw60gVsOtdGtvdmljZSI+CiAgICAgIDxsYWJlbD48aW5wdXQgdHlwZT0iZmlsZSIgYWNjZXB0PSJpbWFnZS8qIiBoaWRkZW4+CiAgICAgICAgPHNwYW4gY2xhc3M9ImNoZWNrIj4xPC9zcGFuPjxzcGFuIGNsYXNzPSJ0eHQiPjxiPkZvdGthIHBvZCB2eXNva291IHBlY8OtPC9iPjxzbWFsbD5Eb2xuw60gVsOtdGtvdmljZSwgbmVqbMOpcGUgaSBzIGNlbG91IHBlY8OtIHYgesOhYsSbcnU8L3NtYWxsPjwvc3Bhbj48c3BhbiBjbGFzcz0idGh1bWIiPjwvc3Bhbj48L2xhYmVsPjwvbGk+CiAgICA8bGkgY2xhc3M9InRhc2siIGRhdGEtaT0iMSIgZGF0YS1wbGFjZT0iQm9sdCBUb3dlciI+CiAgICAgIDxsYWJlbD48aW5wdXQgdHlwZT0iZmlsZSIgYWNjZXB0PSJpbWFnZS8qIiBoaWRkZW4+CiAgICAgICAgPHNwYW4gY2xhc3M9ImNoZWNrIj4yPC9zcGFuPjxzcGFuIGNsYXNzPSJ0eHQiPjxiPlNlbGZpZSBzIHbDvWhsZWRlbTwvYj48c21hbGw+Qm9sdCBUb3dlciwgaWRlw6FsbsSbIHMga8Ohdm91IG5lYm8gxI1hamVtIHYgcnVjZTwvc21hbGw+PC9zcGFuPjxzcGFuIGNsYXNzPSJ0aHVtYiI+PC9zcGFuPjwvbGFiZWw+PC9saT4KICAgIDxsaSBjbGFzcz0idGFzayIgZGF0YS1pPSIyIiBkYXRhLXBsYWNlPSJTdHVkaW8gRyI+CiAgICAgIDxsYWJlbD48aW5wdXQgdHlwZT0iZmlsZSIgYWNjZXB0PSJpbWFnZS8qIiBoaWRkZW4+CiAgICAgICAgPHNwYW4gY2xhc3M9ImNoZWNrIj4zPC9zcGFuPjxzcGFuIGNsYXNzPSJ0eHQiPjxiPkZvdGthIHDFmWVkIGRpdmFkbGVtPC9iPjxzbWFsbD5TdHVkaW8gRywgamXFoXTEmyBuZcW+IHpoYXNub3Ugc3bEm3RsYTwvc21hbGw+PC9zcGFuPjxzcGFuIGNsYXNzPSJ0aHVtYiI+PC9zcGFuPjwvbGFiZWw+PC9saT4KICA8L29sPgogIDxwIGNsYXNzPSJoaW50Ij5LbGVwbmkgbmEgw7prb2wgYSB2eWJlciBuZWJvIHZ5Zm/FpSBmb3RrdS4gRm90a3kgesWvc3TDoXZhasOtIGplbiB2IHRvbWhsZSB0ZWxlZm9udS48L3A+CiAgPGRpdiBjbGFzcz0ibWlzZS1kb25lIiBpZD0ibWlzZS1kb25lIj4KICAgIDxkaXYgY2xhc3M9ImJpZy1oZWFydCI+8J+SmzwvZGl2PgogICAgPGgyPk1pc2Ugc3BsbsSbbmE8L2gyPgogICAgPHA+VMWZaSBmb3RreSwgamVkbm8gbmVkxJtsbsOtIG9kcG9sZWRuZS4gRMOta3ksIMW+ZSBqc2kgaG8gc3Ryw6F2aWxhIHNlIG1ub3UuPC9wPgogICAgPGJ1dHRvbiB0eXBlPSJidXR0b24iIGNsYXNzPSJidG4iIGlkPSJtYWtlLWNvbGxhZ2UiPlZ5dHZvxZlpdCBuYcWhaSBrb2zDocW+IOKcqDwvYnV0dG9uPgogICAgPGRpdiBjbGFzcz0iY29sbGFnZS1vdXQiIGlkPSJjb2xsYWdlLW91dCI+PC9kaXY+CiAgPC9kaXY+Cjwvc2VjdGlvbj4KCjxzZWN0aW9uIGNsYXNzPSJjYXJkIGRldGFpbCI+CiAgPHAgY2xhc3M9InRpbWUiPjE2OjAwIMK3IHphc3TDoXZrYSAxPC9wPgogIDxoMj5Eb2xuw60gb2JsYXN0IFbDrXRrb3ZpY2U8L2gyPgogIDxwPkLDvXZhbMOpIMW+ZWxlesOhcm55IHVwcm9zdMWZZWQgT3N0cmF2eS4gUG9zbGVkbsOtIHZ5c29rw6EgcGVjIHRhZHkgdnloYXNsYSB2IHJvY2UgMTk5OCBhIHogY2Vsw6lobyBhcmXDoWx1IGplIGRuZXMgbsOhcm9kbsOtIGt1bHR1cm7DrSBwYW3DoXRrYS4gTmVzbG91xb7DrSBhbGUgamFrbyBza2FuemVuLCDFvmlqZSBrb25jZXJ0eSwgdsO9c3RhdmFtaSBhIGxpZG1pLjwvcD4KICA8dWwgY2xhc3M9ImZhY3RzIj4KICAgIDxsaT48Yj4xIDIwMCB0dW48L2I+IHN1cm92w6lobyDFvmVsZXphIGRlbm7EmyB2eXJvYmlsYSB2eXNva8OhIHBlYyDEjS4gMTwvbGk+CiAgICA8bGk+PGI+MTk5ODwvYj4gc2UgdHUgdnlyb2JpbG8gxb5lbGV6byBuYXBvc2xlZHk8L2xpPgogICAgPGxpPjxiPjEsNSBtaWxpb251PC9iPiBuw6F2xaF0xJt2bsOta8WvIHDFmWlqZWxvIHphIHJvayBkbyBhcmXDoWx1PC9saT4KICA8L3VsPgogIDxwIGNsYXNzPSJub3RlIj5QcsWvdm9kY2U6IGrDoS4gTmEgb3TDoXpreSBvZHBvdsOtZMOhbSwgbmEgdHkgdMSbxb5rw6kgaW1wcm92aXp1anUg8J+YhDwvcD4KPC9zZWN0aW9uPgoKPHNlY3Rpb24gY2xhc3M9ImNhcmQgZGV0YWlsIj4KICA8cCBjbGFzcz0idGltZSI+MTc6MDAgwrcgemFzdMOhdmthIDI8L3A+CiAgPGgyPkJvbHQgQ2Fmw6kgbmEgQm9sdCBUb3dlcjwvaDI+CiAgPHA+TmEgdnJjaG9sdSB2eXNva8OpIHBlY2UgxI0uIDEgc3RvasOtIHByb3NrbGVuw6EgbsOhc3RhdmJhLCBrdGVyb3UgbmF2cmhsIGFyY2hpdGVrdCBKb3NlZiBQbGVza290LiBVdm5pdMWZIGplIG5lanbDvcWhIHBvbG/FvmVuw6Ega2F2w6FybmEgdiBPc3RyYXbEmy4gVSBrw6F2eSBuZWJvIMSNYWplIG9kdHVkIHV2aWTDrW1lIGNlbMOpIG3Em3N0byBhIHphIGRvYnLDqSB2aWRpdGVsbm9zdGkgaSBCZXNreWR5LjwvcD4KICA8dWwgY2xhc3M9ImZhY3RzIj4KICAgIDxsaT48Yj43OCBtPC9iPiBtxJvFmcOtIHbEm8W+IGkgcyBuw6FzdGF2Ym91PC9saT4KICAgIDxsaT48Yj42Myw2IG08L2I+IG3Em8WZaWxhIHDFr3ZvZG7DrSBwZWMgYmV6IG7DoXN0YXZieTwvbGk+CiAgICA8bGk+PGI+MjAxNTwvYj4gdsSbxb4gcG9rxZl0aWwgc3ByaW50ZXIgVXNhaW4gQm9sdCwgb2R0dWQgaSBqbcOpbm88L2xpPgogICAgPGxpPjxiPjE5MTE8L2I+IHBvY2jDoXplasOtIHrDoWtsYWR5IHBlY2UsIG5lanN0YXLFocOtIGTDoW15IGNlbMOpaG8gYXJlw6FsdTwvbGk+CiAgPC91bD4KPC9zZWN0aW9uPgoKPHNlY3Rpb24gY2xhc3M9ImNhcmQgZGV0YWlsIj4KICA8cCBjbGFzcz0idGltZSI+MTk6MDAgwrcgemFzdMOhdmthIDM8L3A+CiAgPGgyPkRpdmFkbG86IFBlcm7DrWvDocWZPC9oMj4KICA8cD5WZcSNZXIgemFrb27EjcOtbWUgdmUgU3R1ZGl1IEcsIG1hbMOpbSBuZXrDoXZpc2zDqW0gZGl2YWRsZSB2IGNlbnRydS4gVnpuaWtsbyB2IHJvY2UgMjAxOSB2IHByb3N0b3LDoWNoIGLDvXZhbMOpaG8gcGFww61ybmljdHbDrSwgemUga3RlcsOpaG8gamUgdGXEjyBrYXbDoXJuYSBhIGRpdmFkZWxuw60gc8OhbC48L3A+CiAgPHA+UGVybsOta8OhxZkgamUgb2NlxYhvdmFuw6kgbW9ub2RyYW1hLCBuYSBqZXZpxaF0aSBzdG9qw60gamVkaW7DvSBoZXJlYywgUGV0ciBQYW56ZW5iZXJnZXIuIFphIHRpdHVsbsOtIHJvbGksIHBvc3RhdnUgcG9kbGUgc2t1dGXEjW7DqWhvIMSNbG92xJtrYSwgesOtc2thbCBjZW51IFRow6FsaWUgaSBjZW51IEphbnRhci48L3A+CiAgPHVsIGNsYXNzPSJmYWN0cyI+CiAgICA8bGk+PGI+U3R1ZGlvIEc8L2I+IENoZWzEjWlja8OpaG8gNjkxLzgsIE1vcmF2c2vDoSBPc3RyYXZhPC9saT4KICAgIDxsaT48Yj5aYcSNw6F0ZWs8L2I+IHYgMTk6MDA8L2xpPgogIDwvdWw+Cjwvc2VjdGlvbj4K";
+
+  const preview = new URLSearchParams(location.search).has("nahled");
+  const box = document.getElementById("content");
+  let revealed = false;
+
+  function decode() {
+    const bytes = Uint8Array.from(atob(CONTENT_ENCODED), c => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+  function units(ms) {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    return [[Math.floor(s / 86400), "dní"], [Math.floor(s % 86400 / 3600), "hodin"],
+            [Math.floor(s % 3600 / 60), "minut"], [s % 60, "sekund"]]
+      .map(([n, l]) => `<div class="unit"><span class="num">${String(n).padStart(2, "0")}</span><span class="lbl">${l}</span></div>`).join("");
+  }
+  function tick() {
+    if (revealed) return;
+    const left = REVEAL_AT - Date.now();
+    if (preview || left <= 0) {
+      revealed = true;
+      box.innerHTML = decode();
+      initMap();
+      initMise();
+      return;
+    }
+    box.innerHTML = `<section class="card lock">
+      <div class="lock-icon">🔒</div>
+      <h2>Tohle ještě neuvidíš</h2>
+      <p class="when">otevře se v neděli ve 12:00</p>
+      <div class="countdown">${units(left)}</div>
+    </section>`;
+  }
+  // ===== MISE S FOTKAMI (fotky se ukládají jen v telefonu, v IndexedDB) =====
+  const DB_NAME = "mise-evy", STORE = "fotky";
+  function db() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open(DB_NAME, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore(STORE);
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    });
+  }
+  async function dbGet(k) { try { const d = await db(); return await new Promise(r => { const q = d.transaction(STORE).objectStore(STORE).get(k); q.onsuccess = () => r(q.result); q.onerror = () => r(null); }); } catch (e) { return null; } }
+  async function dbSet(k, v) { try { const d = await db(); d.transaction(STORE, "readwrite").objectStore(STORE).put(v, k); } catch (e) {} }
+
+  // zmenší fotku na max 1600 px, ať je to rychlé a nezabírá místo
+  function shrink(file) {
+    return new Promise((res, rej) => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1600, k = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(img.src);
+        res(c.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = rej;
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  function loadImg(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+
+  async function initMise() {
+    const root = document.getElementById("mise");
+    if (!root) return;
+    const tasks = [...root.querySelectorAll(".task")];
+    const photos = [];
+    for (let i = 0; i < tasks.length; i++) photos[i] = await dbGet("foto" + i);
+
+    function render(popIndex) {
+      let firstMissing = photos.findIndex(p => !p);
+      if (firstMissing === -1) firstMissing = tasks.length;
+      tasks.forEach((li, i) => {
+        const done = !!photos[i];
+        li.classList.toggle("done", done);
+        li.classList.toggle("locked", i > firstMissing);
+        li.querySelector("input").disabled = i > firstMissing;
+        li.querySelector(".check").textContent = done ? "✓" : String(i + 1);
+        li.querySelector(".thumb").style.backgroundImage = done ? `url(${photos[i]})` : "";
+        li.classList.toggle("pop", i === popIndex);
+      });
+      document.getElementById("mise-done").classList.toggle("show", firstMissing >= tasks.length);
+    }
+
+    tasks.forEach((li, i) => {
+      const input = li.querySelector("input");
+      input.addEventListener("change", async () => {
+        const f = input.files && input.files[0];
+        if (!f) return;
+        li.classList.add("busy");
+        try {
+          photos[i] = await shrink(f);
+          await dbSet("foto" + i, photos[i]);
+          document.getElementById("collage-out").innerHTML = "";
+        } catch (e) { alertBox("Tuhle fotku se nepodařilo načíst, zkus jinou."); }
+        li.classList.remove("busy");
+        input.value = "";
+        render(i);
+      });
+    });
+
+    document.getElementById("make-collage").addEventListener("click", async (ev) => {
+      const btn = ev.currentTarget;
+      btn.classList.add("busy"); btn.textContent = "Skládám koláž…";
+      try {
+        const url = await makeCollage(photos, tasks.map(t => t.dataset.place));
+        const out = document.getElementById("collage-out");
+        out.innerHTML = `<img src="${url}" alt="Naše koláž">
+          <div class="row">
+            <a class="btn" href="${url}" download="nedele-s-tebou.jpg">Stáhnout koláž</a>
+            <button type="button" class="btn ghost" id="share-collage">Sdílet</button>
+          </div>
+          <p class="hint">Na iPhonu můžeš taky podržet prst na obrázku → Uložit do Fotek.</p>`;
+        const share = document.getElementById("share-collage");
+        share.addEventListener("click", async () => {
+          try {
+            const blob = await (await fetch(url)).blob();
+            const file = new File([blob], "nedele-s-tebou.jpg", { type: "image/jpeg" });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) await navigator.share({ files: [file], title: "Nedělní odpoledne s tebou" });
+            else alertBox("Sdílení tady nejde, použij Stáhnout.");
+          } catch (e) {}
+        });
+        out.scrollIntoView({ behavior: "smooth", block: "center" });
+      } catch (e) { alertBox("Koláž se nepovedla, zkus to znovu."); }
+      btn.classList.remove("busy"); btn.textContent = "Vytvořit znovu ✨";
+    });
+
+    render(-1);
+  }
+
+  function alertBox(msg) {
+    const p = document.createElement("p");
+    p.className = "hint"; p.style.color = "var(--accent)"; p.textContent = msg;
+    document.getElementById("mise").appendChild(p);
+    setTimeout(() => p.remove(), 4000);
+  }
+
+  async function makeCollage(photos, places) {
+    try { await document.fonts.ready; } catch (e) {}
+    const W = 1080, H = 1350;
+    const c = document.createElement("canvas"); c.width = W; c.height = H;
+    const g = c.getContext("2d");
+    // pozadí
+    g.fillStyle = "#f7f1ea"; g.fillRect(0, 0, W, H);
+    const grad = g.createRadialGradient(160, 120, 0, 160, 120, 600);
+    grad.addColorStop(0, "rgba(236,213,207,.8)"); grad.addColorStop(1, "rgba(236,213,207,0)");
+    g.fillStyle = grad; g.fillRect(0, 0, W, H);
+    const grad2 = g.createRadialGradient(W - 140, H - 120, 0, W - 140, H - 120, 600);
+    grad2.addColorStop(0, "rgba(207,220,203,.8)"); grad2.addColorStop(1, "rgba(207,220,203,0)");
+    g.fillStyle = grad2; g.fillRect(0, 0, W, H);
+
+    // nadpis
+    g.textAlign = "center"; g.fillStyle = "#4a3f3a";
+    g.font = '600 64px "Cormorant Garamond", Georgia, serif';
+    g.fillText("Nedělní odpoledne", W / 2, 110);
+    g.fillStyle = "#c98f86";
+    g.font = 'italic 500 64px "Cormorant Garamond", Georgia, serif';
+    g.fillText("s tebou", W / 2, 178);
+
+    // polaroidy
+    const slots = [
+      { x: 70,  y: 235, rot: -4 },
+      { x: 586, y: 285, rot: 3.5 },
+      { x: 328, y: 765, rot: -1.5 },
+    ];
+    const size = 380, pad = 22, bottom = 86;
+    for (let i = 0; i < 3; i++) {
+      const img = await loadImg(photos[i]);
+      const s = slots[i];
+      g.save();
+      g.translate(s.x + (size + pad * 2) / 2, s.y + (size + pad + bottom) / 2);
+      g.rotate(s.rot * Math.PI / 180);
+      g.translate(-(size + pad * 2) / 2, -(size + pad + bottom) / 2);
+      g.shadowColor = "rgba(90,60,45,.28)"; g.shadowBlur = 30; g.shadowOffsetY = 12;
+      g.fillStyle = "#fffdf9"; g.fillRect(0, 0, size + pad * 2, size + pad + bottom);
+      g.shadowColor = "transparent";
+      // fotka oříznutá na čtverec
+      const m = Math.min(img.width, img.height);
+      g.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, pad, pad, size, size);
+      g.fillStyle = "#4a3f3a";
+      g.font = 'italic 500 38px "Cormorant Garamond", Georgia, serif';
+      g.textAlign = "center";
+      g.fillText(places[i], (size + pad * 2) / 2, size + pad + 56);
+      g.restore();
+    }
+
+    // patička
+    g.textAlign = "center"; g.fillStyle = "#8c7d74";
+    g.font = '400 30px "Nunito", system-ui, sans-serif';
+    g.fillText("Ostrava · 15. 11. 2026  💛", W / 2, H - 50);
+    return c.toDataURL("image/jpeg", 0.9);
+  }
+
+  async function legRoute(a, b) {
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`;
+      const r = await fetch(url);
+      const j = await r.json();
+      return j.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+    } catch (e) { return [[a.lat, a.lng], [b.lat, b.lng]]; }
+  }
+
+  async function initMap() {
+    const el = document.getElementById("map");
+    if (!el || !window.L) return;           // bez internetu zůstane jednoduchá mapka
+    const pts = JSON.parse(el.dataset.points);
+    // Leaflet vykreslíme do skrytého boxu a vyměníme za kreslenou mapku,
+    // až když se opravdu načtou mapové podklady.
+    const holder = document.createElement("div");
+    holder.className = "map";
+    holder.style.cssText = "position:absolute;left:-9999px;width:" + el.offsetWidth + "px";
+    document.body.appendChild(holder);
+    const map = L.map(holder, { scrollWheelZoom: false });
+    const tiles = L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; OpenStreetMap &copy; CARTO', subdomains: "abcd", maxZoom: 19
+    }).addTo(map);
+    tiles.once("load", () => {
+      holder.style.cssText = "";
+      el.replaceWith(holder);
+      map.invalidateSize();
+      map.fitBounds(pts.map(p => [p.lat, p.lng]), { padding: [50, 50] });
+    });
+    map.fitBounds(pts.map(p => [p.lat, p.lng]), { padding: [50, 50] });
+
+    pts.forEach(p => {
+      L.marker([p.lat, p.lng], {
+        icon: L.divIcon({ className: "", html: `<div class="num-pin">${p.n}</div>`, iconSize: [34, 34], iconAnchor: [17, 17] })
+      }).addTo(map).bindTooltip(`<b>${p.name}</b><small>${p.sub}</small>`, {
+        permanent: true, direction: "right", offset: [18, 0], className: "pin-label"
+      });
+    });
+
+    // trasa autem: 1 → 2 a 2 → 3
+    for (let i = 0; i < pts.length - 1; i++) {
+      const line = await legRoute(pts[i], pts[i + 1]);
+      L.polyline(line, { color: "#c98f86", weight: 5, opacity: .9, lineCap: "round", className: "route-line" }).addTo(map);
+    }
+  }
+
+  tick();
+  setInterval(tick, 1000);
+</script>
+</body>
+</html>
